@@ -1,4 +1,24 @@
-﻿"""Model inputs to run PyGEM"""
+# calibration_icethickness for individual glacier with 1940 volume (find glen_a)
+    # glena_region.csv
+
+# run_simulation with option_calibration=None
+    # run batch process with parameters specified in input file changing
+    # use_glena_region=True (change fp to use individual glacier)
+
+# compare binned simulation output (time-averaged, area-weighted? get outline from Brandon) with our historical data
+    # obtain best parameter set
+    # plot where out values lie in comparison to Rounce
+
+# compare calibration from 1940 to Rounce MCMC
+    # run Rounce calibration with my glen_a from 1940 (1 simulation with option_calibration MCMC)
+        # re-run model with MCMC comparison to see mass at 2100
+        # compare mass of historical vs Science paper model
+
+# run for each SSP and GCM combination
+    # run for Rounce and my calibration
+
+
+"""Model inputs to run PyGEM"""
 
 # Built-in libraries
 import os, sys
@@ -34,7 +54,9 @@ rgi_glac_number = 'all'
 
 glac_no_skip = None
 glac_no = None 
-glac_no = ['15.03733'] # Khumbu Glacier
+# glac_no = ['01.15645'] # Kennicott Glacier
+glac_no = ['01.26722'] # Root Glacier
+# glac_no = ['15.03733'] # Khumbu Glacier
 # glac_no = ['1.10689'] # Columbia Glacier
 # glac_no = ['1.03622'] # LeConte Glacier
 
@@ -58,8 +80,8 @@ oggm_border = 240                      # 10, 80, 160, 240 (recommend 240 if expe
 # Reference period runs (reference period refers to the calibration period)
 #   This will typically vary between 1980-present
 ref_gcm_name = 'ERA5'               # reference climate dataset
-ref_startyear = 2000                # first year of model run (reference dataset)
-ref_endyear = 2019                  # last year of model run (reference dataset)
+ref_startyear = 1940                # first year of model run (reference dataset)
+ref_endyear = 2022                  # last year of model run (reference dataset)
 ref_wateryear = 'calendar'          # options for years: 'calendar', 'hydro', 'custom'
 ref_spinupyears = 0                 # spin up years
 if ref_spinupyears > 0:
@@ -67,9 +89,9 @@ if ref_spinupyears > 0:
 
 # GCM period used for simulation run 
 gcm_startyear = 2000                # first year of model run (simulation dataset)
-gcm_endyear = 2019                  # last year of model run (simulation dataset)
+gcm_endyear = 2100                  # last year of model run (simulation dataset)
 gcm_wateryear = 'calendar'          # options for years: 'calendar', 'hydro', 'custom'
-gcm_bc_startyear = 1981             # first year used for GCM bias correction
+gcm_bc_startyear = 1940             # first year used for GCM bias correction
 gcm_spinupyears = 0                 # spin up years for simulation (output not set up for spinup years at present)
 constantarea_years = 0              # number of years to not let the area or volume change
 if gcm_spinupyears > 0:
@@ -84,7 +106,7 @@ if hindcast:
 
 #%% ===== CALIBRATION OPTIONS =====
 # Calibration option ('emulator', 'MCMC', 'MCMC_fullsim' 'HH2015', 'HH2015mod', None)
-option_calibration = 'HH2015'
+option_calibration = None
 
 # Prior distribution (specify filename or set equal to None)
 priors_reg_fullfn = main_directory + '/../Output/calibration/priors_region.csv'
@@ -248,6 +270,8 @@ if option_dynamics in ['OGGM', 'MassRedistributionCurves']:
     cfl_number = 0.02
     cfl_number_calving = 0.01
     glena_reg_fullfn = main_directory + '/../Output/calibration/glena_region.csv'
+    # glena_reg_fullfn = main_directory + '/../Output/calibration/glena_glac_1940.csv'
+    # glena_reg_fullfn = main_directory + '/../Output/calibration/glena_glac.csv'
     use_reg_glena = True
     if use_reg_glena:
         assert os.path.exists(glena_reg_fullfn), 'Regional glens a calibration file does not exist.'
@@ -326,7 +350,7 @@ elif option_refreezing == 'HH2015':
     
 #%% ===== CLIMATE DATA FILEPATHS AND FILENAMES =====
 # ERA5 (default reference climate data)
-if ref_gcm_name == 'ERA5':
+if ref_gcm_name == 'ERA5':    
     era5_fp = main_directory + '/../climate_data/ERA5/'
     era5_temp_fn = 'ERA5_temp_monthly_1940_2023.nc'
     era5_tempstd_fn = 'ERA5_tempstd_monthly.nc'
@@ -334,6 +358,7 @@ if ref_gcm_name == 'ERA5':
     era5_elev_fn = 'ERA5_geopotential.nc'
     era5_pressureleveltemp_fn = 'ERA5_pressureleveltemp_monthly_2020_2023.nc'
     era5_lr_fn = 'ERA5_lapserates_monthly_1940_2023.nc'
+    
     assert os.path.exists(era5_fp), 'ERA5 filepath does not exist'
     assert os.path.exists(era5_fp + era5_temp_fn), 'ERA5 temperature filepath does not exist'
     assert os.path.exists(era5_fp + era5_prec_fn), 'ERA5 precipitation filepath does not exist'

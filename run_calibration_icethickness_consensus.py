@@ -27,7 +27,7 @@ import pygem.pygem_modelsetup as modelsetup
 
 from oggm import cfg
 from oggm import tasks
-from oggm.core import climate
+from oggm.core import massbalance
 
    
 #%% ----- MANUAL INPUT DATA -----
@@ -183,7 +183,7 @@ def reg_vol_comparison(gdirs, mbmods, a_multiplier=1, fs=0, debug=False):
         mbmod_inv = mbmods[nglac]
         
         # Arbitrariliy shift the MB profile up (or down) until mass balance is zero (equilibrium for inversion)
-        climate.apparent_mb_from_any_mb(gdir, mb_model=mbmod_inv, mb_years=np.arange(nyears))
+        massbalance.apparent_mb_from_any_mb(gdir, mb_model=mbmod_inv, mb_years=np.arange(nyears))
     
         tasks.prepare_for_inversion(gdir)
         tasks.mass_conservation_inversion(gdir, glen_a=cfg.PARAMS['glen_a']*a_multiplier, fs=fs)

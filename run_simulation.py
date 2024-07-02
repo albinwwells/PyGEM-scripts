@@ -134,8 +134,6 @@ def getparser():
                         help='Temperature bias')
     parser.add_argument('-ddfsnow', action='store', type=float, default=pygem_prms.ddfsnow,
                         help='Degree-day factor of snow')
-    parser.add_argument('-oggm_working_dir', action='store', type=str, default=pygem_prms.oggm_gdir_fp,
-                        help='Specify OGGM working dir - useful if performing a grid search and have duplicated glacier directories')
     # flags
     parser.add_argument('-option_ordered', action='store_true',
                         help='Flag to keep glacier lists ordered (default is off)')
@@ -380,11 +378,11 @@ def main(list_packed_vars):
 
             # ===== Load glacier data: area (km2), ice thickness (m), width (km) =====
             if not glacier_rgi_table['TermType'] in [1,5] or not pygem_prms.include_calving:
-                gdir = single_flowline_glacier_directory(glacier_str, logging_level=pygem_prms.logging_level, working_dir=args.oggm_working_dir)
+                gdir = single_flowline_glacier_directory(glacier_str, logging_level=pygem_prms.logging_level)
                 gdir.is_tidewater = False
                 calving_k = None
             else:
-                gdir = single_flowline_glacier_directory_with_calving(glacier_str, logging_level=pygem_prms.logging_level, working_dir=args.oggm_working_dir)
+                gdir = single_flowline_glacier_directory_with_calving(glacier_str, logging_level=pygem_prms.logging_level)
                 gdir.is_tidewater = True
                 cfg.PARAMS['use_kcalving_for_inversion'] = True
                 cfg.PARAMS['use_kcalving_for_run'] = True
@@ -532,12 +530,25 @@ def main(list_packed_vars):
                         print('cfl number:', cfg.PARAMS['cfl_number'])
                         
                     if pygem_prms.use_reg_glena:
-                        glena_df = pd.read_csv(pygem_prms.glena_reg_fullfn)                    
-                        glena_O1regions = [int(x) for x in glena_df.O1Region.values]
-                        assert glacier_rgi_table.O1Region in glena_O1regions, glacier_str + ' O1 region not in glena_df'
-                        glena_idx = np.where(glena_O1regions == glacier_rgi_table.O1Region)[0][0]
+                        glena_df = pd.read_csv(pygem_prms.glena_reg_fullfn)  
+                        try:
+                            print('Finding glen_a for individual glacier', glac_no)
+                            glena_O1regions = [int(x) for x in glena_df.O1Region.values]
+                            glena_glac = [int(x) for x in glena_df.glac.values]
+                            if isinstance(glac_no, list):
+                                glac_no_O1region, glac_no_number = glac_no[0].split('.')
+                            else:
+                                glac_no_O1region, glac_no_number = glac_no.split('.')
+                            conds = (np.array(glena_O1regions) == float(glac_no_O1region)) & (np.array(glena_glac) == float(glac_no_number))
+                            glena_idx = np.where(conds)[0][0]
+                        except:                  
+                            glena_O1regions = [int(x) for x in glena_df.O1Region.values]
+                            assert glacier_rgi_table.O1Region in glena_O1regions, glacier_str + ' O1 region not in glena_df'
+                            glena_idx = np.where(glena_O1regions == glacier_rgi_table.O1Region)[0][0]
+
                         glen_a_multiplier = glena_df.loc[glena_idx,'glens_a_multiplier']
                         fs = glena_df.loc[glena_idx,'fs']
+                        print('\t\t\t\t\t\t...found:', glen_a_multiplier)
                     else:
                         fs = pygem_prms.fs
                         glen_a_multiplier = pygem_prms.glen_a_multiplier
@@ -1046,8 +1057,6 @@ def main(list_packed_vars):
                                                     gcm_endyear = args.gcm_endyear)
 
                             for n_iter in range(sim_iters):
-                                # pass model params for iteration and update output dataset model params
-                                output_stats.set_modelprms({key: modelprms_all[key][n_iter] for key in modelprms_all})
                                 # create and return xarray dataset
                                 output_stats.create_xr_ds()
                                 output_ds_all_stats = output_stats.get_xr_ds()
@@ -1182,7 +1191,7 @@ def main(list_packed_vars):
                     if pygem_prms.export_binned_thickness and glacier_rgi_table.Area > pygem_prms.export_binned_area_threshold:
                         
                         # Distance from top of glacier downglacier
-                        output_glac_bin_dist = np.arange(nfls[0].nx) * nfls[0].dx_meter
+                        output_glac_bin_dist = np.arange(nfls[0].nx) * nfls[0].dx_meter           
 
                         if pygem_prms.export_all_simiters and sim_iters > 1:
                             # Instantiate dataset
@@ -1200,8 +1209,6 @@ def main(list_packed_vars):
                                                     gcm_endyear = args.gcm_endyear)
 
                             for n_iter in range(sim_iters):
-                                # pass model params for iteration and update output dataset model params
-                                output_binned.set_modelprms({key: modelprms_all[key][n_iter] for key in modelprms_all})
                                 # create and return xarray dataset
                                 output_binned.create_xr_ds()
                                 output_ds_binned_stats = output_binned.get_xr_ds()
@@ -1233,9 +1240,8 @@ def main(list_packed_vars):
                         output_binned.create_xr_ds()
                         output_ds_binned_stats = output_binned.get_xr_ds()
 
-                        # populate dataset with stats from each variable of interest
-                        output_ds_binned_stats['bin_distance'].values = output_glac_bin_dist[np.newaxis, :]
-                        output_ds_binned_stats['bin_surface_h_initial'].values = surface_h_initial[np.newaxis, :]
+                        output_ds_binned_stats['bin_distance'].values = output_glac_bin_dist[np.newaxis, :] # added by Albin
+                        output_ds_binned_stats['bin_surface_h_initial'].values = surface_h_initial[np.newaxis, :] # added by Albin
                         output_ds_binned_stats['bin_mass_annual'].values = (
                                 np.median(output_glac_bin_mass_annual, axis=2)[np.newaxis,:,:])
                         output_ds_binned_stats['bin_thick_annual'].values = (
@@ -1252,7 +1258,7 @@ def main(list_packed_vars):
                             output_ds_binned_stats['bin_massbalclim_annual_mad'].values = (
                                 median_abs_deviation(output_glac_bin_massbalclim_annual, axis=2)[np.newaxis,:,:])
                         
-                        # export merged netcdf glacierwide stats
+                        # export merged netcdf glacierwide stats                        
                         output_binned.save_xr_ds(output_binned.get_fn().replace('SETS',f'{sim_iters}sets') + 'binned.nc')
     #                    # ----- INDIVIDUAL RUNS (area, volume, fixed-gauge runoff) -----
     #                    # Create empty annual dataset

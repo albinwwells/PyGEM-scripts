@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from scipy.stats import median_abs_deviation
 # Local libraries
-import class_climate
-import pygem.pygem_input as pygem_prms
+from pygem import class_climate
+import pygem_input as pygem_prms
 import pygem.pygem_modelsetup as modelsetup
 
 
